@@ -41,5 +41,5 @@ def unity_episode(env, agent: Agent, brain_name, max_t=10000, train=True):
     return score.max()
 
 
-def wrap_env(env, brain_name):
-    return partial(unity_episode, env, brain_name=brain_name)
+def wrap_env(env, brain_name, train=True):
+    return partial(unity_episode, env, brain_name=brain_name, train=train)

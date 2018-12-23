@@ -16,13 +16,19 @@ def main(argv):
 
     agent = default_agent(device, state_size, action_size)
 
-    episode_fn = wrap_env(env, brain_name)
+    episode_fn = wrap_env(env, brain_name, train=False)
 
     return run(episode_fn, agent)
 
 
 def run(episode_fn, agent):
-    return episode_fn(agent)
+    scores = []
+    while True:
+        try:
+            scores.append(episode_fn(agent))
+        except KeyboardInterrupt:
+            break
+    return scores
 
 
 if __name__ == '__main__':
