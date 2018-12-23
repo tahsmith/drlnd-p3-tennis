@@ -26,7 +26,7 @@ def augment_state(state):
 
 def unity_episode(env, agent: Agent, brain_name, max_t=10000, train=True):
     assert max_t > 0
-    env_info = env.reset(train_mode=train)[brain_name]
+    env_info = env.reset(train_mode=False)[brain_name]
     state = augment_state(np.array(env_info.vector_observations))
     score = np.array([0.0, 0.0])
     for t in range(max_t):

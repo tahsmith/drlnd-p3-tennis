@@ -1,44 +1,44 @@
+from functools import partial
+from math import sqrt
+
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-import numpy as np
 
 
 def initialise(m):
-    if type(m) is nn.Linear:
-        m.bias.data.fill_(0.0)
-        m.weight.data.fill_(0.0)
+    noise(1.0, m)
+
+
+def noise(sigma, m):
+    if isinstance(m, nn.Linear):
+        scale = sqrt(m.weight.data.shape[1])
+        noise = np.random.normal(scale=sigma / scale,
+                                 size=m.weight.data.shape)
+        m.weight.data.add_(torch.from_numpy(noise).float())
 
 
 class Actor(nn.Module):
-    def __init__(self, state_size, action_size, action_range=None):
+    def __init__(self, state_size, action_size):
         super(Actor, self).__init__()
-        hidden_units = 256
-
-        if action_range is None:
-            action_range = [[-1, 1] for _ in range(action_size)]
-        action_range = np.array(action_range)
-        self.action_0 = torch.from_numpy(action_range[:, 0]).float()
-        self.action_range = torch.from_numpy(
-            np.diff(action_range, axis=1)[:, 0]).float()
-
         self.dropout = nn.Dropout()
         self.pi = nn.Sequential(
-            nn.Linear(in_features=state_size, out_features=400),
+            nn.Linear(in_features=state_size, out_features=400, bias=False),
+            nn.BatchNorm1d(400),
             nn.ELU(),
             self.dropout,
-            nn.Linear(in_features=400, out_features=300),
+            nn.Linear(in_features=400, out_features=300, bias=False),
+            nn.BatchNorm1d(300),
             nn.ELU(),
-            nn.Linear(in_features=300, out_features=action_size),
+            nn.Linear(in_features=300, out_features=action_size, bias=False),
+            nn.BatchNorm1d(action_size)
         )
-        self.pi.apply(initialise)
 
     def forward(self, state):
         x = self.pi(state)
         x = F.tanh(x)
         return x
 
-    def to(self, *args, **kwargs):
-        self.action_0 = self.action_0.to(*args, **kwargs)
-        self.action_range = self.action_range.to(*args, **kwargs)
-        return super(Actor, self).to(*args, **kwargs)
+    def noise(self, sigma):
+        self.pi.apply(partial(noise, sigma))

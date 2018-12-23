@@ -38,10 +38,10 @@ class Agent:
             weight_decay=weight_decay,
             lr=critic_learning_rate)
 
-        self.actor_control = Actor(state_size, action_size, action_range).to(
+        self.actor_control = Actor(state_size, action_size).to(
             device)
         self.actor_control.dropout.p = dropout_p
-        self.actor_target = Actor(state_size, action_size, action_range).to(
+        self.actor_target = Actor(state_size, action_size).to(
             device)
         self.actor_target.eval()
         self.actor_optimizer = torch.optim.Adam(
@@ -50,7 +50,7 @@ class Agent:
             lr=actor_learning_rate)
 
         self.batch_size = batch_size
-        self.min_buffer_size = 1000
+        self.min_buffer_size = batch_size
         self.replay_buffer = ReplayBuffer(device, state_size, action_size,
                                           buffer_size)
 
@@ -71,12 +71,13 @@ class Agent:
         with torch.no_grad():
             action = self.actor_control(state).cpu().numpy()
         self.actor_control.train()
-        if training:
-            noise = self.noise.sample()
-            action += noise
+        # if training:
+        #     noise = self.noise.sample()
+        #     action += noise
         return action
 
     def step(self, state, action, reward, next_state, done):
+        self.actor_control.noise(self.noise.sigma)
         p = self.calculate_p(state, action, reward, next_state, done)
 
         for i in range(state.shape[0]):
