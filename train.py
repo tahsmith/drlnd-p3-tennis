@@ -33,13 +33,19 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
         steps += t
         scores.append(score)
 
-        print('\rep = {i:9d} total steps = {t:9d} - {score:.2f}'.
+        print('\rep = {i:9d} total steps = {t:9d} - {score:5.2f}'.
               format(i=i + 1, t=steps, score=score), end="")
 
         if (i + 1) % window_size == 0:
             avg_score = sum(scores[-window_size:]) / window_size
 
-            print('\r{i} - {score:.2f}'.format(i=i + 1, score=avg_score))
+            print('\r{i:{width}d} - {score:5.2f}'
+                .format(
+                    i=i + 1,
+                    score=avg_score,
+                    width=len(str(max_eps))
+                )
+            )
 
             if avg_score > best_score:
                 best_score = avg_score
