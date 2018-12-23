@@ -1,14 +1,28 @@
 from unittest.mock import MagicMock
 
 import pytest
+from attr import attrs, attrib
 
 from unity_env import unity_episode
+
+
+@attrs
+class EnvInfo:
+    vector_observations = attrib()
+    rewards = attrib()
+    local_done = attrib()
 
 
 @pytest.fixture
 def env():
     mock_env = MagicMock()
-    mock_env.step.return_value = MagicMock()
+    mock_env.step.return_value = {'brain':
+        EnvInfo(
+            vector_observations=[[0], [0]],
+            rewards=[0, 1],
+            local_done=[0, 1]
+        )
+    }
 
     return mock_env
 
@@ -21,5 +35,5 @@ def agent():
 
 
 def test_reacher_episode(env, agent):
-    unity_episode(env, agent, 'brain')
-
+    score = unity_episode(env, agent, 'brain')
+    assert score == 1
