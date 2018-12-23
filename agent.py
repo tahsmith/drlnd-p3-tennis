@@ -11,6 +11,14 @@ from actor import Actor
 from replay_buffer import ReplayBuffer
 
 
+def pack_actors(x):
+    return x.reshape(x.shape[0] // 2, -1)
+
+
+def unpack_actors(x):
+    return x.reshape(x.shape[0] * 2, -1)
+
+
 class Agent:
     def __init__(self, device, state_size, action_size, buffer_size=10,
                  batch_size=10,
@@ -52,7 +60,8 @@ class Agent:
 
         self.batch_size = batch_size
         self.min_buffer_size = 5000
-        self.replay_buffer = ReplayBuffer(device, state_size, action_size,
+        self.replay_buffer = ReplayBuffer(device,
+                                          state_size * 2, action_size * 2,
                                           buffer_size)
 
         self.discount_rate = discount_rate
@@ -79,11 +88,15 @@ class Agent:
         return action
 
     def step(self, state, action, reward, next_state, done):
-        p = self.calculate_p(state, action, reward, next_state, done)
+        # p = self.calculate_p(state, action, reward, next_state, done)
 
-        for i in range(state.shape[0]):
-            self.replay_buffer.add(state[i, :], action[i, :], reward[i],
-                                   next_state[i, :], done[i], p[i])
+        self.replay_buffer.add(
+            pack_actors(state),
+            pack_actors(action),
+            pack_actors(reward[:, np.newaxis]),
+            pack_actors(next_state),
+            pack_actors(done[:, np.newaxis])
+        )
         if self.step_count % self.steps_per_update == 0:
             self.learn()
         self.step_count += 1
@@ -99,6 +112,7 @@ class Agent:
             states, actions, rewards, next_states, dones)
         self.actor_control.train()
 
+        p = p.repeat(1, 2).reshape(-1)
         importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
         importance_scaling /= importance_scaling.max()
         self.critic_optimizer.zero_grad()
@@ -107,8 +121,10 @@ class Agent:
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
-        expected_actions = self.actor_control(states)
-        critic_score = self.critic_control(states, expected_actions)
+        unpacked_states = unpack_actors(states)
+        expected_actions = self.actor_control(unpacked_states)
+        duplicated_states = unpack_actors(states.repeat(1, 2))
+        critic_score = self.critic_control(duplicated_states, expected_actions)
         loss = -1 * (importance_scaling * critic_score).sum() / self.batch_size
         loss.backward()
         self.actor_optimizer.step()
@@ -116,23 +132,30 @@ class Agent:
         self.update_target(self.critic_control, self.critic_target)
         self.update_target(self.actor_control, self.actor_target)
 
-        self.replay_buffer.update(indicies, error.detach().abs().cpu() + 1e-3)
+        # self.replay_buffer.update(indicies, error.detach().abs().cpu() + 1e-3)
 
     def bellman_eqn_error(self, states, actions, rewards, next_states, dones):
         """Double DQN error - use the control network to get the best action
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        next_actions = self.actor_target(next_states)
+        actions = unpack_actors(actions)
+        rewards = unpack_actors(rewards)
+        next_states_unpacked = unpack_actors(next_states)
+        next_states_duplicated = unpack_actors(next_states.repeat(1, 2))
+        states_duplicated = unpack_actors(states.repeat(1, 2))
+        dones = unpack_actors(dones)
 
-        target_action_values = self.critic_target(next_states, next_actions)
+        next_actions = self.actor_target(next_states_unpacked)
+
+        target_action_values = self.critic_target(next_states_duplicated, next_actions)
 
         target_rewards = (
                 rewards
                 + self.discount_rate * (1 - dones) * target_action_values
         )
 
-        current_rewards = self.critic_control(states, actions)
+        current_rewards = self.critic_control(states_duplicated, actions)
         error = current_rewards - target_rewards
         return error
 
@@ -203,7 +226,7 @@ class OUNoise:
     def sample(self):
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.uniform(
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.normal(
             size=self.mu.shape)
         self.state = x + dx
         return self.state
@@ -223,7 +246,7 @@ def default_agent(device, state_size, action_size):
         steps_per_update=5,
         weight_decay=0.00,
         noise_decay=1.0,
-        noise_max=0.4,
+        noise_max=0.2,
         dropout_p=0.2,
         n_agents=2
     )

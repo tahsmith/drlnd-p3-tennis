@@ -11,7 +11,7 @@ class Critic(nn.Module):
         self.dropout = nn.Dropout()
 
         self.state_layer = nn.Sequential(
-            nn.Linear(in_features=state_size, out_features=400),
+            nn.Linear(in_features=state_size * 2, out_features=400),
             nn.ELU(),
             self.dropout,
         )

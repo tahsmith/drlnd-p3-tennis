@@ -18,9 +18,9 @@ class ReplayBuffer:
         self.p = np.zeros((buffer_size,), dtype=np.float32)
         self.state = np.empty((buffer_size, state_size), dtype=np.float32)
         self.action = np.empty((buffer_size, action_size), dtype=np.float32)
-        self.reward = np.empty((buffer_size,), dtype=np.float32)
+        self.reward = np.empty((buffer_size, 2), dtype=np.float32)
         self.next_state = np.empty((buffer_size, state_size), dtype=np.float32)
-        self.done = np.empty((buffer_size,), dtype=np.uint8)
+        self.done = np.empty((buffer_size, 2), dtype=np.uint8)
 
         self.device = device
         self.cursor = 0
@@ -36,18 +36,18 @@ class ReplayBuffer:
             self.last += 1
         else:
             i = np.argmin(self.p)
-        #
-        # i = self.cursor
-        # self.cursor += 1
-        # self.cursor %= self.buffer_size
+
+        i = self.cursor
+        self.cursor += 1
+        self.cursor %= self.buffer_size
 
 
         self.p[i] = p
         self.state[i, :] = state
         self.action[i, :] = action
-        self.reward[i] = reward
+        self.reward[i, :] = reward
         self.next_state[i, :] = next_state
-        self.done[i] = done
+        self.done[i, :] = done
 
     def sample(self, batch_size):
         """Randomly sample a batch of experiences from memory."""
