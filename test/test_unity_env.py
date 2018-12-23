@@ -35,5 +35,6 @@ def agent():
 
 
 def test_reacher_episode(env, agent):
-    score = unity_episode(env, agent, 'brain')
+    t, score = unity_episode(env, agent, 'brain')
     assert score == 1
+    assert t == 1

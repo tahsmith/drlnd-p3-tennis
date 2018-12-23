@@ -18,15 +18,21 @@ def get_agent_requirements(env):
 
     return brain_name, state_size, action_size
 
+def augment_state(state):
+    # ids = np.array([[-1], [1]], dtype=np.float64)
+    # return np.concatenate([state, ids], axis=1)
+    return state
+
 
 def unity_episode(env, agent: Agent, brain_name, max_t=10000, train=True):
+    assert max_t > 0
     env_info = env.reset(train_mode=train)[brain_name]
-    state = np.array(env_info.vector_observations)
+    state = augment_state(np.array(env_info.vector_observations))
     score = np.array([0.0, 0.0])
     for t in range(max_t):
         action = agent.policy(state, train)
         env_info = env.step(action)[brain_name]
-        next_state = np.array(env_info.vector_observations)
+        next_state = augment_state(np.array(env_info.vector_observations))
         reward = np.array(env_info.rewards)
         done = np.array(env_info.local_done, dtype=np.uint8)
         if train:
@@ -38,7 +44,7 @@ def unity_episode(env, agent: Agent, brain_name, max_t=10000, train=True):
             break
 
     agent.end_of_episode(score)
-    return score.max()
+    return t + 1, score.max()
 
 
 def wrap_env(env, brain_name, train=True):

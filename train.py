@@ -26,12 +26,15 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
           min_score=0.5):
     scores = []
     best_score = float('-inf')
+    steps = 0
 
     for i in range(max_eps):
-        score = episode_fn(agent)
+        t, score = episode_fn(agent)
+        steps += t
         scores.append(score)
 
-        print('\r{i} - {score:.2f}'.format(i=i + 1, score=score), end="")
+        print('\rep = {i:9d} total steps = {t:9d} - {score:.2f}'.
+              format(i=i + 1, t=steps, score=score), end="")
 
         if (i + 1) % window_size == 0:
             avg_score = sum(scores[-window_size:]) / window_size
