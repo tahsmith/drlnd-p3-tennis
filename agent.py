@@ -3,7 +3,6 @@ import random
 
 import torch
 import torch.optim
-import torch.functional as F
 import numpy as np
 
 from critic import Critic
@@ -51,7 +50,7 @@ class Agent:
             lr=actor_learning_rate)
 
         self.batch_size = batch_size
-        self.min_buffer_size = 5000
+        self.min_buffer_size = 1000
         self.replay_buffer = ReplayBuffer(device, state_size, action_size,
                                           buffer_size)
 
@@ -65,7 +64,6 @@ class Agent:
         self.noise_max = noise_max
         self.noise = OUNoise([n_agents, action_size], 15071988, sigma=self.noise_max)
         self.noise_decay = noise_decay
-        self.last_score = float('-inf')
 
     def policy(self, state, training=True):
         state = torch.from_numpy(state).float().to(self.device)
@@ -203,7 +201,7 @@ class OUNoise:
     def sample(self):
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.random.uniform(
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.normal(
             size=self.mu.shape)
         self.state = x + dx
         return self.state
@@ -223,7 +221,7 @@ def default_agent(device, state_size, action_size):
         steps_per_update=5,
         weight_decay=0.00,
         noise_decay=1.0,
-        noise_max=0.4,
+        noise_max=0.2,
         dropout_p=0.2,
         n_agents=2
     )
