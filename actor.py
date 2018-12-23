@@ -1,7 +1,6 @@
 from functools import partial
 from math import sqrt
 
-import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -14,9 +13,8 @@ def initialise(m):
 def noise(sigma, m):
     if isinstance(m, nn.Linear):
         scale = sqrt(m.weight.data.shape[1])
-        noise = np.random.normal(scale=sigma / scale,
-                                 size=m.weight.data.shape)
-        m.weight.data.add_(torch.from_numpy(noise).float())
+        noise = torch.randn_like(m.weight.data)
+        m.weight.data.add_(noise * sigma / scale)
 
 
 class Actor(nn.Module):
