@@ -18,7 +18,6 @@ class Agent:
                  discount_rate=0.99,
                  tau=0.1,
                  steps_per_update=4,
-                 action_range=None,
                  dropout_p=0.0,
                  weight_decay=0.0001,
                  noise_max=0.2,
@@ -71,10 +70,10 @@ class Agent:
         with torch.no_grad():
             action = self.actor_control(state).cpu().numpy()
         self.actor_control.train()
-        # if training:
-        #     noise = self.noise.sample()
-        #     action += noise
-        return action
+        if training:
+            noise = self.noise.sample()
+            action += noise
+        return np.clip(action, -1, 1)
 
     def step(self, state, action, reward, next_state, done):
         self.actor_control.noise(self.noise.sigma)
@@ -222,7 +221,7 @@ def default_agent(device, state_size, action_size):
         steps_per_update=5,
         weight_decay=0.00,
         noise_decay=0.99,
-        noise_max=0.2,
+        noise_max=0.4,
         dropout_p=0.2,
         n_agents=2
     )
