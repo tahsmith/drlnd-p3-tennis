@@ -4,6 +4,12 @@ from torch.nn import functional as F
 import numpy as np
 
 
+def initialise(m):
+    if type(m) is nn.Linear:
+        m.bias.data.fill_(0.0)
+        m.weight.data.fill_(0.0)
+
+
 class Actor(nn.Module):
     def __init__(self, state_size, action_size, action_range=None):
         super(Actor, self).__init__()
@@ -25,6 +31,7 @@ class Actor(nn.Module):
             nn.ELU(),
             nn.Linear(in_features=300, out_features=action_size),
         )
+        self.pi.apply(initialise)
 
     def forward(self, state):
         x = self.pi(state)
