@@ -47,10 +47,10 @@ class Agent:
             weight_decay=weight_decay,
             lr=critic_learning_rate)
 
-        self.actor_control = Actor(state_size, action_size, action_range).to(
+        self.actor_control = Actor(state_size, action_size).to(
             device)
         self.actor_control.dropout.p = dropout_p
-        self.actor_target = Actor(state_size, action_size, action_range).to(
+        self.actor_target = Actor(state_size, action_size).to(
             device)
         self.actor_target.eval()
         self.actor_optimizer = torch.optim.Adam(
