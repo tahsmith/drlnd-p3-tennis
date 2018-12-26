@@ -17,9 +17,11 @@ def main(argv):
 
     episode_fn = wrap_env(env, brain_name)
 
+    agent = default_agent(device, state_size, action_size)
+
     agents = [
-        default_agent(device, state_size, action_size)
-        for _ in range(2)
+        agent,
+        agent
     ]
     return train(episode_fn, agents)
 
@@ -56,7 +58,7 @@ def print_stats(i, score, steps, best_score, endl):
     print('\rep = {i:9d}, total steps = {t:9d}, score = {score:5.2f}, best = '
           '{best:5.2f} {star}'.
           format(i=i + 1, t=steps, score=score, best=best_score,
-                 star='*' if best_score==score else ' '),
+                 star='*' if best_score == score else ' '),
           end='\n' if endl else '')
 
 
