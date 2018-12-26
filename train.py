@@ -38,11 +38,10 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
         if (i + 1) % window_size == 0:
             avg_score = sum(scores[-window_size:]) / window_size
 
-            print_stats(i, avg_score, steps, best_score, True)
-
             if avg_score > best_score:
                 best_score = avg_score
-                agent.save('best')
+
+            print_stats(i, avg_score, steps, best_score, True)
 
             if avg_score > min_score:
                 break
@@ -51,8 +50,9 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
 
 def print_stats(i, score, steps, best_score, endl):
     print('\rep = {i:9d}, total steps = {t:9d}, score = {score:5.2f}, best = '
-          '{best:5.2f}'.
-          format(i=i + 1, t=steps, score=score, best=best_score),
+          '{best:5.2f} {star}'.
+          format(i=i + 1, t=steps, score=score, best=best_score,
+                 star='*' if best_score == score else ' '),
           end='\n' if endl else '')
 
 

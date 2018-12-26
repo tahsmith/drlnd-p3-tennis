@@ -223,5 +223,5 @@ def default_agent(device, state_size, action_size):
         noise_decay=0.9995,
         noise_max=0.2,
         dropout_p=0.0,
-        n_agents=2
+        n_agents=1
     )
