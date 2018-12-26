@@ -121,7 +121,7 @@ class Agent:
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        next_actions = self.actor_target(next_states)
+        next_actions = self.actor_control(next_states)
 
         target_action_values = self.critic_target(next_states, next_actions)
 

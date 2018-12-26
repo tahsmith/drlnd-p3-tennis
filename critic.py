@@ -7,7 +7,6 @@ import numpy as np
 class Critic(nn.Module):
     def __init__(self, state_size, action_size):
         super(Critic, self).__init__()
-        hidden_units = 128
         self.dropout = nn.Dropout()
 
         self.state_layer = nn.Sequential(
