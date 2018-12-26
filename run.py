@@ -16,6 +16,8 @@ def main(argv):
 
     agent = default_agent(device, state_size, action_size)
 
+    agent.restore('best')
+
     episode_fn = wrap_env(env, brain_name, train=False)
 
     return run(episode_fn, agent)
