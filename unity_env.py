@@ -24,19 +24,24 @@ def augment_state(state):
     return state
 
 
-def unity_episode(env, agent: Agent, brain_name, max_t=10000, train=True):
+def unity_episode(env, agents: [Agent], brain_name, max_t=10000, train=True):
     assert max_t > 0
     env_info = env.reset(train_mode=train)[brain_name]
     state = augment_state(np.array(env_info.vector_observations))
     score = np.array([0.0, 0.0])
     for t in range(max_t):
-        action = agent.policy(state, train)
-        env_info = env.step(action)[brain_name]
+        actions = []
+        for i, agent in enumerate(agents):
+            actions.append(agent.policy(state[i:i+1, :], train))
+        actions = np.concatenate(actions, axis=0)
+        env_info = env.step(actions)[brain_name]
         next_state = augment_state(np.array(env_info.vector_observations))
         reward = np.array(env_info.rewards)
         done = np.array(env_info.local_done, dtype=np.uint8)
         if train:
-            agent.step(state, action, reward, next_state, done)
+            for i, agent in enumerate(agents):
+                agent.step(state[i:i+1, :], actions[i:i+1, :], reward[i:i+1],
+                           next_state[i:i+1], done[i:i+1])
         state = next_state
         score += reward
 

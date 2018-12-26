@@ -14,11 +14,17 @@ def main(argv):
     env = UnityEnvironment(file_name=env_path)
     brain_name, state_size, action_size = get_agent_requirements(env)
 
-    agent = default_agent(device, state_size, action_size)
+    agents = [
+        default_agent(device, state_size, action_size)
+        for _ in range(2)
+    ]
+
+    for i, agent in enumerate(agents):
+        agent.restore('best-{i}'.format(i=i))
 
     episode_fn = wrap_env(env, brain_name, train=False)
 
-    return run(episode_fn, agent)
+    return run(episode_fn, agents)
 
 
 def run(episode_fn, agent):

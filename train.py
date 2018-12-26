@@ -17,19 +17,21 @@ def main(argv):
 
     episode_fn = wrap_env(env, brain_name)
 
-    agent = default_agent(device, state_size, action_size)
+    agents = [
+        default_agent(device, state_size, action_size)
+        for _ in range(2)
+    ]
+    return train(episode_fn, agents)
 
-    return train(episode_fn, agent)
 
-
-def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
+def train(episode_fn, agents, window_size=100, max_eps=int(2e5),
           min_score=0.5):
     scores = []
     best_score = float('-inf')
     steps = 0
 
     for i in range(max_eps):
-        t, score = episode_fn(agent)
+        t, score = episode_fn(agents)
         steps += t
         scores.append(score)
 
@@ -38,11 +40,12 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
         if (i + 1) % window_size == 0:
             avg_score = sum(scores[-window_size:]) / window_size
 
-            print_stats(i, avg_score, steps, best_score, True)
-
             if avg_score > best_score:
                 best_score = avg_score
-                agent.save('best')
+                for j, agent in enumerate(agents):
+                    agent.save('best-{i}'.format(i=j))
+
+            print_stats(i, avg_score, steps, best_score, True)
 
             if avg_score > min_score:
                 break
@@ -51,8 +54,9 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
 
 def print_stats(i, score, steps, best_score, endl):
     print('\rep = {i:9d}, total steps = {t:9d}, score = {score:5.2f}, best = '
-          '{best:5.2f}'.
-          format(i=i + 1, t=steps, score=score, best=best_score),
+          '{best:5.2f} {star}'.
+          format(i=i + 1, t=steps, score=score, best=best_score,
+                 star='*' if best_score==score else ' '),
           end='\n' if endl else '')
 
 
