@@ -7,17 +7,23 @@ import numpy as np
 class Critic(nn.Module):
     def __init__(self, state_size, action_size):
         super(Critic, self).__init__()
-        hidden_units = 128
         self.dropout = nn.Dropout()
 
         self.state_layer = nn.Sequential(
-            nn.Linear(in_features=state_size * 2, out_features=400),
+            nn.Linear(in_features=state_size * 2, out_features=800),
             nn.ELU(),
             self.dropout,
         )
         self.qa = nn.Sequential(
-            nn.Linear(in_features=400 + action_size,
-                      out_features=300),
+            nn.Linear(in_features=800 + action_size,
+                      out_features=600, bias=False),
+            nn.BatchNorm1d(600),
+            nn.ELU(),
+            self.dropout,
+
+            nn.Linear(in_features=600,
+                      out_features=300, bias=False),
+            nn.BatchNorm1d(300),
             nn.ELU(),
             nn.Linear(in_features=300, out_features=1),
         )
