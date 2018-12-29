@@ -23,7 +23,7 @@ def main(argv):
 
 
 def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
-          min_score=0.5):
+          min_score=1.0):
     scores = []
     best_score = float('-inf')
     steps = 0

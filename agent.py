@@ -10,6 +10,35 @@ from actor import Actor
 from replay_buffer import ReplayBuffer
 
 
+def agents_to_global(x):
+    assert len(x.shape) == 3
+    width = x.shape[2]
+    n_agents = x.shape[1]
+    reversed_agents = list(reversed(range(n_agents)))
+    result = torch.cat([
+        x.reshape(-1, width * 2),
+        x[:, reversed_agents, :].reshape(-1, width * 2)
+    ], dim=0)
+    assert result.shape == (x.shape[0] * 2, width * 2)
+    return result
+
+
+def global_to_agents(x):
+    x = x.reshape(2, -1)
+    x = x.transpose(0, 1)
+    x = x.reshape(-1, 2, 1)
+    return x
+
+
+def unpack_agents(x):
+    states_size = x.shape[2]
+    return x.reshape(-1, states_size)
+
+
+def pack_agents(n, x):
+    return x.reshape(-1, n, x.shape[1])
+
+
 class Agent:
     def __init__(self, device, state_size, action_size, buffer_size=10,
                  batch_size=10,
@@ -27,21 +56,25 @@ class Agent:
         self.device: torch.device = device
         self.state_size = state_size
         self.action_size = action_size
+        self.n_agents = n_agents
 
-        self.critic_control = Critic(state_size, action_size).to(device)
+        def make_critic():
+            critic = Critic(state_size * n_agents, action_size * n_agents)
+            critic = critic.to(device)
+            return critic
+
+        self.critic_control = make_critic()
         self.critic_control.dropout.p = dropout_p
-        self.critic_target = Critic(state_size, action_size).to(device)
+        self.critic_target = make_critic()
         self.critic_target.eval()
         self.critic_optimizer = torch.optim.Adam(
             self.critic_control.parameters(),
             weight_decay=weight_decay,
             lr=critic_learning_rate)
 
-        self.actor_control = Actor(state_size, action_size).to(
-            device)
+        self.actor_control = Actor(state_size, action_size).to(device)
         self.actor_control.dropout.p = dropout_p
-        self.actor_target = Actor(state_size, action_size).to(
-            device)
+        self.actor_target = Actor(state_size, action_size).to(device)
         self.actor_target.eval()
         self.actor_optimizer = torch.optim.Adam(
             self.actor_control.parameters(),
@@ -51,7 +84,7 @@ class Agent:
         self.batch_size = batch_size
         self.min_buffer_size = batch_size
         self.replay_buffer = ReplayBuffer(device, state_size, action_size,
-                                          buffer_size)
+                                          buffer_size, n_agents)
 
         self.discount_rate = discount_rate
 
@@ -79,9 +112,7 @@ class Agent:
         self.actor_control.noise(self.noise.sigma)
         p = self.calculate_p(state, action, reward, next_state, done)
 
-        for i in range(state.shape[0]):
-            self.replay_buffer.add(state[i, :], action[i, :], reward[i],
-                                   next_state[i, :], done[i], p[i])
+        self.replay_buffer.add(state, action, reward, next_state, done, p)
         if self.step_count % self.steps_per_update == 0:
             self.learn()
         self.step_count += 1
@@ -97,7 +128,8 @@ class Agent:
             states, actions, rewards, next_states, dones)
         self.actor_control.train()
 
-        importance_scaling = (self.replay_buffer.buffer_size * p) ** -1
+        importance_scaling = (self.replay_buffer.buffer_size
+                              * p.unsqueeze(1).repeat(1, 2, 1)) ** -1
         importance_scaling /= importance_scaling.max()
         self.critic_optimizer.zero_grad()
         loss = (importance_scaling * (error ** 2)).sum() / self.batch_size
@@ -105,8 +137,13 @@ class Agent:
         self.critic_optimizer.step()
 
         self.actor_optimizer.zero_grad()
-        expected_actions = self.actor_control(states)
-        critic_score = self.critic_control(states, expected_actions)
+        expected_actions = self.actor_control(unpack_agents(states))
+        expected_actions = pack_agents(self.n_agents, expected_actions)
+        critic_score = self.critic_control(
+            agents_to_global(states),
+            agents_to_global(expected_actions)
+        )
+        critic_score = global_to_agents(critic_score)
         loss = -1 * (importance_scaling * critic_score).sum() / self.batch_size
         loss.backward()
         self.actor_optimizer.step()
@@ -114,48 +151,59 @@ class Agent:
         self.update_target(self.critic_control, self.critic_target)
         self.update_target(self.actor_control, self.actor_target)
 
-        self.replay_buffer.update(indicies, error.detach().abs().cpu() + 1e-3)
+        self.replay_buffer.update(indicies, (error.detach().abs().cpu() +
+                                             1e-3).mean(dim=1))
 
     def bellman_eqn_error(self, states, actions, rewards, next_states, dones):
         """Double DQN error - use the control network to get the best action
         and apply the target network to it to get the target reward which is
         used for the bellman eqn error.
         """
-        next_actions = self.actor_control(next_states)
+        next_actions = self.actor_control(unpack_agents(next_states))
+        next_actions = pack_agents(self.n_agents, next_actions)
+        next_states_global = agents_to_global(next_states)
+        next_actions_global = agents_to_global(next_actions)
 
-        target_action_values = self.critic_target(next_states, next_actions)
+        target_action_values = self.critic_target(next_states_global,
+                                                  next_actions_global)
+        target_action_values = global_to_agents(target_action_values)
 
         target_rewards = (
                 rewards
                 + self.discount_rate * (1 - dones) * target_action_values
         )
 
+        states = agents_to_global(states)
+        actions = agents_to_global(actions)
+
         current_rewards = self.critic_control(states, actions)
+        current_rewards = global_to_agents(current_rewards)
+
         error = current_rewards - target_rewards
         return error
 
     def calculate_p(self, state, action, reward, next_state, done):
         next_state = torch.from_numpy(next_state).float().to(
-            self.device)
-        state = torch.from_numpy(state).float().to(self.device)
-        action = torch.from_numpy(action).float().to(self.device)
-        reward = torch.from_numpy(reward).float().to(self.device)
+            self.device).unsqueeze(0)
+        state = torch.from_numpy(state).float().to(self.device).unsqueeze(0)
+        action = torch.from_numpy(action).float().to(self.device).unsqueeze(0)
+        reward = torch.from_numpy(reward).float().to(self.device).unsqueeze(0)
         done = torch.from_numpy(done).float().to(
-            self.device)
+            self.device).unsqueeze(0)
 
-        done = done.unsqueeze(1)
-        reward = reward.unsqueeze(1)
+        done = done.unsqueeze(2)
+        reward = reward.unsqueeze(2)
 
         self.actor_control.eval()
         self.critic_control.eval()
 
         with torch.no_grad():
-            retval = abs(
+            error = abs(
                 self.bellman_eqn_error(state, action, reward, next_state,
                                        done)) + 1e-3
         self.critic_control.train()
         self.actor_control.train()
-        return retval
+        return error.mean(dim=1)
 
     def update_target(self, control, target):
         for target_param, control_param in zip(
@@ -222,6 +270,6 @@ def default_agent(device, state_size, action_size):
         weight_decay=0.00,
         noise_decay=0.9995,
         noise_max=0.2,
-        dropout_p=0.0,
-        n_agents=1
+        dropout_p=0.2,
+        n_agents=2
     )
