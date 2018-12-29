@@ -40,6 +40,7 @@ def train(episode_fn, agent, window_size=100, max_eps=int(2e5),
 
             if avg_score > best_score:
                 best_score = avg_score
+                agent.save('best')
 
             print_stats(i, avg_score, steps, best_score, True)
 
