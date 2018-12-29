@@ -110,9 +110,9 @@ class Agent:
 
     def step(self, state, action, reward, next_state, done):
         self.actor_control.noise(self.noise.sigma)
-        # p = self.calculate_p(state, action, reward, next_state, done)
+        p = self.calculate_p(state, action, reward, next_state, done)
 
-        self.replay_buffer.add(state, action, reward, next_state, done)
+        self.replay_buffer.add(state, action, reward, next_state, done, p)
         if self.step_count % self.steps_per_update == 0:
             self.learn()
         self.step_count += 1
@@ -151,7 +151,8 @@ class Agent:
         self.update_target(self.critic_control, self.critic_target)
         self.update_target(self.actor_control, self.actor_target)
 
-        # self.replay_buffer.update(indicies, error.detach().abs().cpu() + 1e-3)
+        self.replay_buffer.update(indicies, (error.detach().abs().cpu() +
+                                             1e-3).mean(dim=1))
 
     def bellman_eqn_error(self, states, actions, rewards, next_states, dones):
         """Double DQN error - use the control network to get the best action
@@ -183,26 +184,26 @@ class Agent:
 
     def calculate_p(self, state, action, reward, next_state, done):
         next_state = torch.from_numpy(next_state).float().to(
-            self.device)
-        state = torch.from_numpy(state).float().to(self.device)
-        action = torch.from_numpy(action).float().to(self.device)
-        reward = torch.from_numpy(reward).float().to(self.device)
+            self.device).unsqueeze(0)
+        state = torch.from_numpy(state).float().to(self.device).unsqueeze(0)
+        action = torch.from_numpy(action).float().to(self.device).unsqueeze(0)
+        reward = torch.from_numpy(reward).float().to(self.device).unsqueeze(0)
         done = torch.from_numpy(done).float().to(
-            self.device)
+            self.device).unsqueeze(0)
 
-        done = done.unsqueeze(1)
-        reward = reward.unsqueeze(1)
+        done = done.unsqueeze(2)
+        reward = reward.unsqueeze(2)
 
         self.actor_control.eval()
         self.critic_control.eval()
 
         with torch.no_grad():
-            retval = abs(
+            error = abs(
                 self.bellman_eqn_error(state, action, reward, next_state,
                                        done)) + 1e-3
         self.critic_control.train()
         self.actor_control.train()
-        return retval
+        return error.mean(dim=1)
 
     def update_target(self, control, target):
         for target_param, control_param in zip(
