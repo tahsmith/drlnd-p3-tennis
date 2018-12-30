@@ -255,7 +255,7 @@ class OUNoise:
         return self.state
 
 
-def default_agent(device, state_size, action_size):
+def default_agent(device, n_agents, state_size, action_size):
     return Agent(
         device,
         state_size,
@@ -271,5 +271,5 @@ def default_agent(device, state_size, action_size):
         noise_decay=0.9995,
         noise_max=0.2,
         dropout_p=0.2,
-        n_agents=2
+        n_agents=n_agents
     )

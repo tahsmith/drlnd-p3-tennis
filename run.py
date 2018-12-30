@@ -1,10 +1,11 @@
 import sys
+from logging import warning
 
 import torch
 from unityagents import UnityEnvironment
 
 from agent import default_agent
-from unity_env import wrap_env, get_agent_requirements
+from unity_env import wrap_env, get_agent_requirements, unity_episode
 
 
 def main(argv):
@@ -12,22 +13,28 @@ def main(argv):
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     env = UnityEnvironment(file_name=env_path)
-    brain_name, state_size, action_size = get_agent_requirements(env)
+    brain_map = get_agent_requirements(env)
 
-    agent = default_agent(device, state_size, action_size)
+    agent_map = {
+        k: default_agent(device, n_agent, state_size, action_size)
+        for k, (n_agent, state_size, action_size)
+        in brain_map.items()
+    }
 
-    agent.restore('best')
+    for name, agent in agent_map.items():
+        try:
+            agent.restore('{name}-best'.format(name=name))
+        except FileNotFoundError:
+            warning('Missing model data for {name}'.format(name=name))
 
-    episode_fn = wrap_env(env, brain_name, train=False)
-
-    return run(episode_fn, agent)
+    return run(env, agent_map)
 
 
-def run(episode_fn, agent):
+def run(env, agent_map):
     scores = []
     while True:
         try:
-            scores.append(episode_fn(agent))
+            scores.append(unity_episode(env, agent_map, train=False))
         except KeyboardInterrupt:
             break
     return scores
