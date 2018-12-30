@@ -7,8 +7,6 @@ from agent import Agent
 
 
 def get_agent_requirements(env):
-    brain_name = env.brain_names[0]
-
     env_info = env.reset(train_mode=True)
 
     agent_requirements = {}

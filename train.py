@@ -4,7 +4,7 @@ import torch
 from unityagents import UnityEnvironment
 
 from agent import default_agent
-from unity_env import wrap_env, get_agent_requirements, unity_episode
+from unity_env import get_agent_requirements, unity_episode
 
 
 def main(argv):

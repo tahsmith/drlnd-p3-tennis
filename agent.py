@@ -1,12 +1,12 @@
 import copy
 import random
 
+import numpy as np
 import torch
 import torch.optim
-import numpy as np
 
-from critic import Critic
 from actor import Actor
+from critic import Critic
 from replay_buffer import ReplayBuffer
 
 
@@ -94,7 +94,8 @@ class Agent:
         self.steps_per_update = steps_per_update
 
         self.noise_max = noise_max
-        self.noise = OUNoise([n_agents, action_size], 15071988, sigma=self.noise_max)
+        self.noise = OUNoise([n_agents, action_size], 15071988,
+                             sigma=self.noise_max)
         self.noise_decay = noise_decay
 
     def policy(self, state, training=True):

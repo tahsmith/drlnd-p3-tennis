@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 
 def normalise(x):
@@ -16,10 +16,13 @@ class ReplayBuffer:
 
         self.last = 0
         self.p = np.zeros(buffer_size, dtype=np.float32)
-        self.state = np.empty((buffer_size, agents, state_size), dtype=np.float32)
-        self.action = np.empty((buffer_size, agents, action_size), dtype=np.float32)
+        self.state = np.empty((buffer_size, agents, state_size),
+                              dtype=np.float32)
+        self.action = np.empty((buffer_size, agents, action_size),
+                               dtype=np.float32)
         self.reward = np.empty((buffer_size, agents), dtype=np.float32)
-        self.next_state = np.empty((buffer_size, agents, state_size), dtype=np.float32)
+        self.next_state = np.empty((buffer_size, agents, state_size),
+                                   dtype=np.float32)
         self.done = np.empty((buffer_size, agents), dtype=np.uint8)
 
         self.device = device
@@ -59,9 +62,11 @@ class ReplayBuffer:
             self.device)
         actions = torch.from_numpy(self.action[choices, :, :]).float().to(
             self.device)
-        rewards = torch.from_numpy(self.reward[choices, :, np.newaxis]).float().to(
+        rewards = torch.from_numpy(
+            self.reward[choices, :, np.newaxis]).float().to(
             self.device)
-        next_states = torch.from_numpy(self.next_state[choices, :, :]).float().to(
+        next_states = torch.from_numpy(
+            self.next_state[choices, :, :]).float().to(
             self.device)
         dones = torch.from_numpy(self.done[choices, :, np.newaxis]).float().to(
             self.device)
