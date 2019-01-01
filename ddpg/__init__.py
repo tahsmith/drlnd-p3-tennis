@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import torch.optim
 
-from actor import Actor
-from critic import Critic
+from ddpg.actor import Actor
+from ddpg.critic import Critic
 from replay_buffer import ReplayBuffer
 
 

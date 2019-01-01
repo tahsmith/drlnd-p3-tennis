@@ -4,7 +4,7 @@ from logging import warning
 import torch
 from unityagents import UnityEnvironment
 
-from agent import default_agent
+from ddpg import default_agent
 from unity_env import get_agent_requirements, unity_episode
 
 

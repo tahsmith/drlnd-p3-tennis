@@ -3,7 +3,7 @@ from typing import Dict
 
 import numpy as np
 
-from agent import Agent
+from ddpg import Agent
 
 
 def get_agent_requirements(env):
