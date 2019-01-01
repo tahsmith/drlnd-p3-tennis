@@ -3,7 +3,8 @@ import sys
 import torch
 from unityagents import UnityEnvironment
 
-from ddpg import default_agent
+import multi_agent
+
 from unity_env import get_agent_requirements, unity_episode
 
 
@@ -14,11 +15,7 @@ def main(argv):
     env = UnityEnvironment(file_name=env_path)
     brain_map = get_agent_requirements(env)
 
-    agent_map = {
-        k: default_agent(device, n_agent, state_size, action_size)
-        for k, (n_agent, state_size, action_size)
-        in brain_map.items()
-    }
+    agent_map = multi_agent.agent_map(brain_map, device)
 
     return train(env, agent_map)
 

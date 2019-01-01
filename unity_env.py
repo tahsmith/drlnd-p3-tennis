@@ -15,11 +15,13 @@ def get_agent_requirements(env):
         info = env_info[brain_name]
         brain = env.brains[brain_name]
 
+        action_type = brain.vector_action_space_type
         action_size = brain.vector_action_space_size
         n_agents = len(info.vector_observations)
         state_size = len(info.vector_observations[0])
 
-        agent_requirements[brain_name] = (n_agents, state_size, action_size)
+        agent_requirements[brain_name] = (n_agents, state_size, action_type,
+                                          action_size)
 
     return agent_requirements
 

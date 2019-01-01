@@ -3,12 +3,16 @@ import random
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torch.optim
 
-from ddpg.actor import Actor
-from ddpg.critic import Critic
 from replay_buffer import ReplayBuffer
 from utils import agents_to_global, global_to_agents, unpack_agents, pack_agents
+from .actor import Actor
+from .critic import Critic
+
+
+
 
 
 class Agent:
@@ -65,21 +69,13 @@ class Agent:
         self.step_count = 0
         self.steps_per_update = steps_per_update
 
-        self.noise_max = noise_max
-        self.noise = OUNoise([n_agents, action_size], 15071988,
-                             sigma=self.noise_max)
-        self.noise_decay = noise_decay
-
     def policy(self, state, training=True):
         state = torch.from_numpy(state).float().to(self.device)
         self.actor_control.eval()
         with torch.no_grad():
-            action = self.actor_control(state).cpu().numpy()
+            action = self.actor_control.act(state)
         self.actor_control.train()
-        if training:
-            noise = self.noise.sample()
-            action += noise
-        return np.clip(action, -1, 1)
+        return action
 
     def step(self, state, action, reward, next_state, done):
         self.actor_control.noise(self.noise.sigma)
